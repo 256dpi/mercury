@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
-// Writer extends a buffered writer that flushes itself asynchronously.
+// Writer extends a buffered writer that flushes itself asynchronously. It uses
+// a timer to flush the buffered writer it it gets stale. Errors that occur
+// during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
 	w *bufio.Writer
 	d time.Duration
@@ -41,16 +43,16 @@ func (w *Writer) Write(p []byte) (int, error) {
 	return w.write(p, false)
 }
 
-// WriteAndFlush writes data to the underlying buffered writer and flushes it
-// immediately after writing.
-func (w *Writer) WriteAndFlush(p []byte) (int, error) {
-	return w.write(p, true)
-}
-
 // Flush flushes the buffered writer immediately.
 func (w *Writer) Flush() error {
 	_, err := w.write(nil, true)
 	return err
+}
+
+// WriteAndFlush writes data to the underlying buffered writer and flushes it
+// immediately after writing.
+func (w *Writer) WriteAndFlush(p []byte) (int, error) {
+	return w.write(p, true)
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
