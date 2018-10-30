@@ -70,6 +70,26 @@ func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 	assert.NoError(t, w.e)
 }
 
+func TestWriterFlush(t *testing.T) {
+	b := new(bytes.Buffer)
+
+	w := NewWriter(b, 1*time.Millisecond)
+	assert.Nil(t, w.t)
+	assert.NoError(t, w.e)
+
+	n, err := w.Write([]byte{1})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.NotNil(t, w.t)
+	assert.NoError(t, w.e)
+
+	err = w.Flush()
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{1}, b.Bytes())
+	assert.Nil(t, w.t)
+	assert.NoError(t, w.e)
+}
+
 func TestWriterWriteError(t *testing.T) {
 	pr, pw := io.Pipe()
 	pr.CloseWithError(errTest)

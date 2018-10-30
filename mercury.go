@@ -47,21 +47,29 @@ func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 	return w.write(p, true)
 }
 
-func (w *Writer) write(p []byte, flush bool) (int, error) {
+// Flush flushes the buffered writer immediately.
+func (w *Writer) Flush() error {
+	_, err := w.write(nil, true)
+	return err
+}
+
+func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
 	// clear and return any error from flush
 	if w.e != nil {
-		err := w.e
+		err = w.e
 		w.e = nil
 		return 0, err
 	}
 
-	// write data
-	n, err := w.w.Write(p)
-	if err != nil {
-		return n, err
+	// write data if available
+	if len(p) > 0 {
+		n, err = w.w.Write(p)
+		if err != nil {
+			return n, err
+		}
 	}
 
 	// flush immediately if requested
