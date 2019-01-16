@@ -17,7 +17,7 @@ var errTest = errors.New("test")
 func TestWriterWrite(t *testing.T) {
 	b := new(bytes.Buffer)
 
-	w := NewWriter(b, 1*time.Millisecond)
+	w := NewWriter(b, time.Millisecond)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -37,7 +37,7 @@ func TestWriterWrite(t *testing.T) {
 func TestWriterWriteAndFlush(t *testing.T) {
 	b := new(bytes.Buffer)
 
-	w := NewWriter(b, 1*time.Millisecond)
+	w := NewWriter(b, time.Millisecond)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -52,7 +52,7 @@ func TestWriterWriteAndFlush(t *testing.T) {
 func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 	b := new(bytes.Buffer)
 
-	w := NewWriter(b, 1*time.Millisecond)
+	w := NewWriter(b, time.Millisecond)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -73,7 +73,7 @@ func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 func TestWriterFlush(t *testing.T) {
 	b := new(bytes.Buffer)
 
-	w := NewWriter(b, 1*time.Millisecond)
+	w := NewWriter(b, time.Millisecond)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -94,7 +94,7 @@ func TestWriterWriteError(t *testing.T) {
 	pr, pw := io.Pipe()
 	pr.CloseWithError(errTest)
 
-	w := NewWriterSize(pw, 1*time.Millisecond, 1)
+	w := NewWriterSize(pw, time.Millisecond, 1)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -107,7 +107,7 @@ func TestWriterWriteAndFlushError(t *testing.T) {
 	pr, pw := io.Pipe()
 	pr.CloseWithError(errTest)
 
-	w := NewWriterSize(pw, 1*time.Millisecond, 1)
+	w := NewWriterSize(pw, time.Millisecond, 1)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -120,7 +120,7 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	pr, pw := io.Pipe()
 	pr.CloseWithError(errTest)
 
-	w := NewWriterSize(pw, 1*time.Millisecond, 2)
+	w := NewWriterSize(pw, time.Millisecond, 2)
 	assert.Nil(t, w.t)
 	assert.NoError(t, w.e)
 
@@ -135,7 +135,7 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-var data = bytes.Repeat([]byte{1}, 64)
+var data64 = bytes.Repeat([]byte{1}, 64)
 
 func BenchmarkStandardWriter64(b *testing.B) {
 	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -144,7 +144,7 @@ func BenchmarkStandardWriter64(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err = f.Write(data)
+		_, err = f.Write(data64)
 		if err != nil {
 			panic(err)
 		}
@@ -162,7 +162,7 @@ func BenchmarkBufferedWriter64(b *testing.B) {
 	w := bufio.NewWriter(f)
 
 	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data)
+		_, err = w.Write(data64)
 		if err != nil {
 			panic(err)
 		}
@@ -177,10 +177,64 @@ func BenchmarkMercuryWriter64(b *testing.B) {
 		panic(err)
 	}
 
-	w := NewWriter(f, 1*time.Millisecond)
+	w := NewWriter(f, time.Millisecond)
 
 	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data)
+		_, err = w.Write(data64)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(1)
+	}
+}
+
+var data64k = bytes.Repeat([]byte{1}, 64*1024)
+
+func BenchmarkStandardWriter64K(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err = f.Write(data64k)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(1)
+	}
+}
+
+func BenchmarkBufferedWriter64K(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		panic(err)
+	}
+
+	w := bufio.NewWriter(f)
+
+	for i := 0; i < b.N; i++ {
+		_, err = w.Write(data64k)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(1)
+	}
+}
+
+func BenchmarkMercuryWriter64K(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		panic(err)
+	}
+
+	w := NewWriter(f, time.Millisecond)
+
+	for i := 0; i < b.N; i++ {
+		_, err = w.Write(data64k)
 		if err != nil {
 			panic(err)
 		}
