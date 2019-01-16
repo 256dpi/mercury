@@ -137,20 +137,24 @@ func TestWriterWriteAsyncError(t *testing.T) {
 
 var data = bytes.Repeat([]byte{1}, 64)
 
-func BenchmarkStandardWriter32(b *testing.B) {
-	f, err := os.Open(os.DevNull)
+func BenchmarkStandardWriter64(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 0; i < b.N; i++ {
-		f.Write(data)
+		_, err = f.Write(data)
+		if err != nil {
+			panic(err)
+		}
+
 		time.Sleep(1)
 	}
 }
 
-func BenchmarkBufferedWriter32(b *testing.B) {
-	f, err := os.Open(os.DevNull)
+func BenchmarkBufferedWriter64(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
@@ -158,13 +162,17 @@ func BenchmarkBufferedWriter32(b *testing.B) {
 	w := bufio.NewWriter(f)
 
 	for i := 0; i < b.N; i++ {
-		w.Write(data)
+		_, err = w.Write(data)
+		if err != nil {
+			panic(err)
+		}
+
 		time.Sleep(1)
 	}
 }
 
-func BenchmarkMercuryWriter32(b *testing.B) {
-	f, err := os.Open(os.DevNull)
+func BenchmarkMercuryWriter64(b *testing.B) {
+	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
@@ -172,7 +180,11 @@ func BenchmarkMercuryWriter32(b *testing.B) {
 	w := NewWriter(f, 1*time.Millisecond)
 
 	for i := 0; i < b.N; i++ {
-		w.Write(data)
+		_, err = w.Write(data)
+		if err != nil {
+			panic(err)
+		}
+
 		time.Sleep(1)
 	}
 }
