@@ -92,7 +92,7 @@ func TestWriterFlush(t *testing.T) {
 
 func TestWriterWriteError(t *testing.T) {
 	pr, pw := io.Pipe()
-	pr.CloseWithError(errTest)
+	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 1)
 	assert.Nil(t, w.t)
@@ -105,7 +105,7 @@ func TestWriterWriteError(t *testing.T) {
 
 func TestWriterWriteAndFlushError(t *testing.T) {
 	pr, pw := io.Pipe()
-	pr.CloseWithError(errTest)
+	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 1)
 	assert.Nil(t, w.t)
@@ -118,7 +118,7 @@ func TestWriterWriteAndFlushError(t *testing.T) {
 
 func TestWriterWriteAsyncError(t *testing.T) {
 	pr, pw := io.Pipe()
-	pr.CloseWithError(errTest)
+	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 2)
 	assert.Nil(t, w.t)
