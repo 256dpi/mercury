@@ -18,76 +18,76 @@ func TestWriterWrite(t *testing.T) {
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.Write([]byte{1})
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
-	assert.NotNil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.NotNil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	time.Sleep(3 * time.Millisecond)
 
 	assert.Equal(t, []byte{1}, b.Bytes())
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 }
 
 func TestWriterWriteAndFlush(t *testing.T) {
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.WriteAndFlush([]byte{1})
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, b.Bytes())
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 }
 
 func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.Write([]byte{1})
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
-	assert.NotNil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.NotNil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err = w.WriteAndFlush([]byte{2})
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2}, b.Bytes())
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 }
 
 func TestWriterFlush(t *testing.T) {
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.Write([]byte{1})
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
-	assert.NotNil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.NotNil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	err = w.Flush()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, b.Bytes())
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 }
 
 func TestWriterWriteError(t *testing.T) {
@@ -95,8 +95,8 @@ func TestWriterWriteError(t *testing.T) {
 	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 1)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.Write([]byte{1, 2})
 	assert.Equal(t, 0, n)
@@ -108,8 +108,8 @@ func TestWriterWriteAndFlushError(t *testing.T) {
 	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 1)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.WriteAndFlush([]byte{1})
 	assert.Equal(t, 1, n)
@@ -121,8 +121,8 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	_ = pr.CloseWithError(errTest)
 
 	w := NewWriterSize(pw, time.Millisecond, 2)
-	assert.Nil(t, w.t)
-	assert.NoError(t, w.e)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
 
 	n, err := w.Write([]byte{1})
 	assert.Equal(t, 1, n)

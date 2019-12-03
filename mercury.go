@@ -11,29 +11,29 @@ import (
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
-	w *bufio.Writer
-	d time.Duration
-	t *time.Timer
-	e error
-	m sync.Mutex
+	writer *bufio.Writer
+	delay  time.Duration
+	timer  *time.Timer
+	err    error
+	mutex  sync.Mutex
 }
 
-// NewWriter wraps the provided writer and enable buffering and asynchronous
+// NewWriter wraps the provided writer and enables buffering and asynchronous
 // flushing using the specified maximum delay.
 func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 	return &Writer{
-		w: bufio.NewWriter(w),
-		d: maxDelay,
+		writer: bufio.NewWriter(w),
+		delay:  maxDelay,
 	}
 }
 
-// NewWriterSize wraps the provided writer and enable buffering and asynchronous
+// NewWriterSize wraps the provided writer and enables buffering and asynchronous
 // flushing using the specified maximum delay. This method allows configuration
 // of the initial buffer size.
 func NewWriterSize(w io.Writer, maxDelay time.Duration, size int) *Writer {
 	return &Writer{
-		w: bufio.NewWriterSize(w, size),
-		d: maxDelay,
+		writer: bufio.NewWriterSize(w, size),
+		delay:  maxDelay,
 	}
 }
 
@@ -56,19 +56,19 @@ func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
-	w.m.Lock()
-	defer w.m.Unlock()
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
 	// clear and return any error from flush
-	if w.e != nil {
-		err = w.e
-		w.e = nil
+	if w.err != nil {
+		err = w.err
+		w.err = nil
 		return 0, err
 	}
 
 	// write data if available
 	if len(p) > 0 {
-		n, err = w.w.Write(p)
+		n, err = w.writer.Write(p)
 		if err != nil {
 			return n, err
 		}
@@ -76,36 +76,36 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 
 	// flush immediately if requested
 	if flush {
-		err = w.w.Flush()
+		err = w.writer.Flush()
 		if err != nil {
 			return n, err
 		}
 	}
 
 	// setup timer if data is buffered
-	if w.w.Buffered() > 0 && w.t == nil {
-		w.t = time.AfterFunc(w.d, w.flush)
+	if w.writer.Buffered() > 0 && w.timer == nil {
+		w.timer = time.AfterFunc(w.delay, w.flush)
 	}
 
 	// stop timer if no data is buffered
-	if w.w.Buffered() == 0 && w.t != nil {
-		w.t.Stop()
-		w.t = nil
+	if w.writer.Buffered() == 0 && w.timer != nil {
+		w.timer.Stop()
+		w.timer = nil
 	}
 
 	return n, nil
 }
 
 func (w *Writer) flush() {
-	w.m.Lock()
-	defer w.m.Unlock()
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
 	// clear timer
-	w.t = nil
+	w.timer = nil
 
 	// flush buffer
-	err := w.w.Flush()
-	if err != nil && w.e == nil {
-		w.e = err
+	err := w.writer.Flush()
+	if err != nil && w.err == nil {
+		w.err = err
 	}
 }
