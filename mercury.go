@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -11,8 +12,8 @@ import (
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
+	delay  int64
 	writer *bufio.Writer
-	delay  time.Duration
 	timer  *time.Timer
 	err    error
 	mutex  sync.Mutex
@@ -23,7 +24,7 @@ type Writer struct {
 func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 	return &Writer{
 		writer: bufio.NewWriter(w),
-		delay:  maxDelay,
+		delay:  int64(maxDelay),
 	}
 }
 
@@ -33,7 +34,7 @@ func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 func NewWriterSize(w io.Writer, maxDelay time.Duration, size int) *Writer {
 	return &Writer{
 		writer: bufio.NewWriterSize(w, size),
-		delay:  maxDelay,
+		delay:  int64(maxDelay),
 	}
 }
 
@@ -55,6 +56,11 @@ func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 	return w.write(p, true)
 }
 
+// SetMaxDelay can be used to adjust the maximum delay of asynchronous flushes.
+func (w *Writer) SetMaxDelay(delay time.Duration) {
+	atomic.StoreInt64(&w.delay, int64(delay))
+}
+
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -74,8 +80,11 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		}
 	}
 
-	// flush immediately if requested
-	if flush {
+	// get delay
+	delay := time.Duration(atomic.LoadInt64(&w.delay))
+
+	// flush immediately if requested or delay is zero
+	if flush || delay == 0 {
 		err = w.writer.Flush()
 		if err != nil {
 			return n, err
@@ -84,7 +93,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 
 	// setup timer if data is buffered
 	if w.writer.Buffered() > 0 && w.timer == nil {
-		w.timer = time.AfterFunc(w.delay, w.flush)
+		w.timer = time.AfterFunc(delay, w.flush)
 	}
 
 	// stop timer if no data is buffered

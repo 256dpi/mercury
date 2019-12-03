@@ -90,6 +90,50 @@ func TestWriterFlush(t *testing.T) {
 	assert.NoError(t, w.err)
 }
 
+func TestWriterWriteNoDelay(t *testing.T) {
+	b := new(bytes.Buffer)
+
+	w := NewWriter(b, 0)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+
+	n, err := w.Write([]byte{1})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+
+	assert.Equal(t, []byte{1}, b.Bytes())
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+}
+
+func TestWriterSetMaxDelay(t *testing.T) {
+	b := new(bytes.Buffer)
+
+	w := NewWriter(b, time.Minute)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+
+	n, err := w.Write([]byte{1})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.NotNil(t, w.timer)
+	assert.NoError(t, w.err)
+
+	w.SetMaxDelay(0)
+
+	n, err = w.Write([]byte{2})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+
+	assert.Equal(t, []byte{1, 2}, b.Bytes())
+	assert.Nil(t, w.timer)
+	assert.NoError(t, w.err)
+}
+
 func TestWriterWriteError(t *testing.T) {
 	pr, pw := io.Pipe()
 	_ = pr.CloseWithError(errTest)
