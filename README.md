@@ -8,4 +8,4 @@
 
 **An asynchronously flushing buffered writer for Go.**
 
-This library implements a simple asynchronously flushing buffered writer by extending the standard `bufio.Writer`. 
+This library implements a simple asynchronously flushing buffered writer by extending the standard `bufio.Writer`.
