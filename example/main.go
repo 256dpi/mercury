@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/256dpi/god"
@@ -12,22 +12,20 @@ import (
 	"github.com/256dpi/mercury"
 )
 
-const writers = 10_000
-const maxTimeout = time.Millisecond
-const maxDelay = 500 * time.Millisecond
+const maxDelay = time.Millisecond
 const bufferSize = 32 * 1024
 
 var data = bytes.Repeat([]byte{0x0}, 256)
 
 var counter = god.NewCounter("data", func(total int) string {
-	return fmt.Sprintf("%.2f MB/s", float64(total)/1024/1024)
+	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
 })
 
 func main() {
 	god.Debug()
 	god.Metrics()
 
-	for i := 0; i < writers; i++ {
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go writer()
 	}
 
@@ -41,10 +39,9 @@ func writer() {
 	}
 
 	w := mercury.NewWriterSize(fd, maxDelay, bufferSize)
+	// w := bufio.NewWriterSize(fd, bufferSize)
 
 	for {
-		time.Sleep(time.Duration(rand.Intn(int(maxTimeout))))
-
 		n, err := w.Write(data)
 		if err != nil {
 			panic(err)
