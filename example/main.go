@@ -14,7 +14,7 @@ import (
 	"github.com/256dpi/mercury"
 )
 
-var data = bytes.Repeat([]byte{0x0}, 256)
+var data = bytes.Repeat([]byte{0x0}, 2048)
 
 var bufferedBytes = god.NewCounter("buffered-bytes", func(total int) string {
 	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
