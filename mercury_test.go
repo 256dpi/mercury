@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -227,8 +226,6 @@ func benchWriters(b *testing.B, size int64, wrap func(io.Writer) io.Writer) {
 		if err != nil {
 			panic(err)
 		}
-
-		runtime.Gosched()
 	}
 
 	switch w := w.(type) {
