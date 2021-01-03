@@ -17,11 +17,11 @@ import (
 var data = bytes.Repeat([]byte{0x0}, 2048)
 
 var bufferedBytes = god.NewCounter("buffered-bytes", func(total int) string {
-	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
+	return fmt.Sprintf("%.2f MB/s", float64(total)/1000_000)
 })
 
 var mercuryBytes = god.NewCounter("mercury-bytes", func(total int) string {
-	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
+	return fmt.Sprintf("%.2f MB/s", float64(total)/1000_000)
 })
 
 var mercuryFlushes = god.NewCounter("mercury-flushes", nil)
