@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/256dpi/god"
@@ -27,6 +28,10 @@ var mercuryFlushes = god.NewCounter("mercury-flushes", nil)
 
 func main() {
 	god.Init(god.Options{})
+
+	god.Track("goroutines", func() string {
+		return strconv.Itoa(runtime.NumGoroutine())
+	})
 
 	for i := 0; i < runtime.NumCPU()/2; i++ {
 		go writer()
