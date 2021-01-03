@@ -16,6 +16,7 @@ import (
 )
 
 var writers = flag.Int("writers", runtime.NumCPU(), "the number of writers")
+var delay = flag.Duration("delay", time.Millisecond, "the maximum delay")
 
 var data = bytes.Repeat([]byte{0x0}, 2048)
 
@@ -30,7 +31,7 @@ var mercuryBytes = god.NewCounter("mercury-bytes", func(total int) string {
 func main() {
 	flag.Parse()
 
-	fmt.Printf("running with %d writers writers...\n", *writers)
+	fmt.Printf("running %d writers with %s delay...\n", *writers, delay.String())
 
 	god.Init(god.Options{})
 
@@ -81,7 +82,7 @@ func mercuryWriter() {
 		panic(err)
 	}
 
-	w := mercury.NewWriter(fd, time.Millisecond)
+	w := mercury.NewWriter(fd, *delay)
 
 	for {
 		n, err := w.Write(data)
