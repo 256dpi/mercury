@@ -12,11 +12,12 @@ import (
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
-	delay  int64
-	writer *bufio.Writer
-	timer  *time.Timer
-	err    error
-	mutex  sync.Mutex
+	delay   int64
+	counter int64
+	writer  *bufio.Writer
+	timer   *time.Timer
+	err     error
+	mutex   sync.Mutex
 }
 
 // NewWriter wraps the provided writer and enables buffering and asynchronous
@@ -62,6 +63,7 @@ func (w *Writer) SetMaxDelay(delay time.Duration) {
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
+	// acquire mutex
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
@@ -114,6 +116,17 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 }
 
 func (w *Writer) flush() {
+	// return if more than one goroutine is waiting
+	n := atomic.LoadInt64(&w.counter)
+	if n > 1 {
+		return
+	}
+
+	// add counter
+	atomic.AddInt64(&w.counter, 1)
+	defer atomic.AddInt64(&w.counter, -1)
+
+	// acquire mutex
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
