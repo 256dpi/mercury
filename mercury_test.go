@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -331,5 +332,11 @@ func BenchmarkMercury_8K_10us(b *testing.B) {
 func BenchmarkMercury_8K_1ms(b *testing.B) {
 	benchWriters(b, 8192, func(writer io.Writer) io.Writer {
 		return NewWriter(writer, time.Millisecond)
+	})
+}
+
+func BenchmarkDiscard_64_1ns(b *testing.B) {
+	benchWriters(b, 64, func(writer io.Writer) io.Writer {
+		return NewWriter(ioutil.Discard, time.Nanosecond)
 	})
 }
