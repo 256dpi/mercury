@@ -114,10 +114,18 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	// write data if available
 	var flushed bool
 	if len(p) > 0 {
-		n, flushed, err = Write(w.writer, p)
+		// get available bytes
+		a := w.writer.Available()
+
+		// write data
+		n, err = w.writer.Write(p)
 		if err != nil {
 			return n, err
 		}
+
+		// a flush happened during the write if more than the available bytes
+		// have been written
+		flushed = n > a
 	}
 
 	// get delay
@@ -143,7 +151,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		return n, nil
 	}
 
-	// stop timer if no data is buffered and armed
+	// stop timer if no data is buffered anymore and armed
 	if buffered == 0 && w.armed {
 		w.timer.Stop()
 		w.armed = false
@@ -151,7 +159,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		return n, nil
 	}
 
-	// otherwise reset timer if some data has been flushed when armed
+	// otherwise reset already armed timer if some data has been flushed
 	if flushed && w.armed {
 		w.timer.Reset(delay)
 	}
