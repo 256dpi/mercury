@@ -14,6 +14,10 @@ import (
 
 var errTest = errors.New("test")
 
+func TestGetStats(t *testing.T) {
+	GetStats()
+}
+
 func TestWriterWrite(t *testing.T) {
 	b := new(bytes.Buffer)
 
@@ -32,7 +36,7 @@ func TestWriterWrite(t *testing.T) {
 	assert.Equal(t, []byte{1}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
-	assert.Equal(t, int64(1), w.flushes)
+	assert.Equal(t, uint64(1), w.flushes)
 }
 
 func TestWriterWriteAndFlush(t *testing.T) {
@@ -51,7 +55,7 @@ func TestWriterWriteAndFlush(t *testing.T) {
 
 	time.Sleep(3 * time.Millisecond)
 
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
@@ -76,7 +80,7 @@ func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 
 	time.Sleep(3 * time.Millisecond)
 
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterFlush(t *testing.T) {
@@ -100,7 +104,7 @@ func TestWriterFlush(t *testing.T) {
 
 	time.Sleep(3 * time.Millisecond)
 
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterWriteNoDelay(t *testing.T) {
@@ -121,7 +125,7 @@ func TestWriterWriteNoDelay(t *testing.T) {
 	assert.Equal(t, []byte{1}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterSetMaxDelay(t *testing.T) {
@@ -150,7 +154,7 @@ func TestWriterSetMaxDelay(t *testing.T) {
 	assert.Equal(t, []byte{1, 2}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterWriteError(t *testing.T) {
@@ -165,7 +169,7 @@ func TestWriterWriteError(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.Error(t, err)
 
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterWriteAndFlushError(t *testing.T) {
@@ -182,7 +186,7 @@ func TestWriterWriteAndFlushError(t *testing.T) {
 
 	time.Sleep(3 * time.Millisecond)
 
-	assert.Equal(t, int64(0), w.flushes)
+	assert.Equal(t, uint64(0), w.flushes)
 }
 
 func TestWriterWriteAsyncError(t *testing.T) {
@@ -203,7 +207,7 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.Error(t, err)
 
-	assert.Equal(t, int64(1), w.flushes)
+	assert.Equal(t, uint64(1), w.flushes)
 }
 
 func benchWriters(b *testing.B, size int64, wrap func(io.Writer) io.Writer) {

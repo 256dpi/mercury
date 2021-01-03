@@ -8,13 +8,26 @@ import (
 	"time"
 )
 
+var flushes uint64
+
+type Stats struct {
+	Flushes uint64
+}
+
+// GetStats returns general statistics.
+func GetStats() Stats {
+	return Stats{
+		Flushes: atomic.LoadUint64(&flushes),
+	}
+}
+
 // Writer extends a buffered writer that flushes itself asynchronously. It uses
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
 	delay   int64
 	queue   int64
-	flushes int64
+	flushes uint64
 	writer  *bufio.Writer
 	timer   *time.Timer
 	armed   bool
@@ -81,8 +94,8 @@ func (w *Writer) SetMaxDelay(delay time.Duration) {
 }
 
 // Flushes returns the number asynchronously performed flushes.
-func (w *Writer) Flushes() int64 {
-	return atomic.LoadInt64(&w.flushes)
+func (w *Writer) Flushes() uint64 {
+	return atomic.LoadUint64(&w.flushes)
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
@@ -170,5 +183,6 @@ func (w *Writer) flush() {
 	}
 
 	// count flush
-	atomic.AddInt64(&w.flushes, 1)
+	atomic.AddUint64(&w.flushes, 1)
+	atomic.AddUint64(&flushes, 1)
 }

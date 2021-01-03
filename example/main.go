@@ -24,13 +24,19 @@ var mercuryBytes = god.NewCounter("mercury-bytes", func(total int) string {
 	return fmt.Sprintf("%.2f MB/s", float64(total)/1000_000)
 })
 
-var mercuryFlushes = god.NewCounter("mercury-flushes", nil)
-
 func main() {
 	god.Init(god.Options{})
 
 	god.Track("goroutines", func() string {
 		return strconv.Itoa(runtime.NumGoroutine())
+	})
+
+	var flushes uint64
+	god.Track("mercury-flushes", func() string {
+		f := mercury.GetStats().Flushes
+		n := f - flushes
+		flushes = f
+		return strconv.FormatUint(n, 10)
 	})
 
 	for i := 0; i < runtime.NumCPU()/2; i++ {
@@ -70,7 +76,6 @@ func mercuryWriter() {
 
 	w := mercury.NewWriter(fd, time.Millisecond)
 
-	var lf int64
 	for {
 		n, err := w.Write(data)
 		if err != nil {
@@ -78,9 +83,5 @@ func mercuryWriter() {
 		}
 
 		mercuryBytes.Add(n)
-
-		f := w.Flushes()
-		mercuryFlushes.Add(int(f - lf))
-		lf = f
 	}
 }
