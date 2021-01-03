@@ -34,17 +34,17 @@ func main() {
 	})
 
 	for i := 0; i < runtime.NumCPU()/2; i++ {
-		go writer()
+		go bufferedWriter()
 	}
 
 	for i := 0; i < runtime.NumCPU()/2; i++ {
-		go asyncWriter()
+		go mercuryWriter()
 	}
 
 	select {}
 }
 
-func writer() {
+func bufferedWriter() {
 	fd, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
@@ -62,7 +62,7 @@ func writer() {
 	}
 }
 
-func asyncWriter() {
+func mercuryWriter() {
 	fd, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
