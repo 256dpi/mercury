@@ -39,6 +39,14 @@ func main() {
 		return strconv.FormatUint(n, 10)
 	})
 
+	var drops uint64
+	god.Track("mercury-drops", func() string {
+		d := mercury.GetStats().Drops
+		n := d - drops
+		drops = d
+		return strconv.FormatUint(n, 10)
+	})
+
 	for i := 0; i < runtime.NumCPU()/2; i++ {
 		go bufferedWriter()
 	}

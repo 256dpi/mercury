@@ -9,15 +9,22 @@ import (
 )
 
 var flushes uint64
+var drops uint64
 
+// Stats represents runtime statistics of all writers.
 type Stats struct {
+	// The number of executed async flushes.
 	Flushes uint64
+
+	// The number of dropped async flushes.
+	Drops uint64
 }
 
 // GetStats returns general statistics.
 func GetStats() Stats {
 	return Stats{
 		Flushes: atomic.LoadUint64(&flushes),
+		Drops:   atomic.LoadUint64(&drops),
 	}
 }
 
@@ -162,6 +169,7 @@ func (w *Writer) flush() {
 	// return if more than one flush is queued
 	n := atomic.LoadInt64(&w.queue)
 	if n > 1 {
+		atomic.AddUint64(&drops, 1)
 		return
 	}
 
