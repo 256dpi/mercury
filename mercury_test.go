@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -179,164 +180,97 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-var data64 = bytes.Repeat([]byte{1}, 64)
-
-func BenchmarkStandardWriter64(b *testing.B) {
+func benchWriters(b *testing.B, size int64) {
 	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 
-	for i := 0; i < b.N; i++ {
-		_, err = f.Write(data64)
-		if err != nil {
-			panic(err)
+	data := make([]byte, size)
+
+	b.Run("Standard", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(size)
+
+		for i := 0; i < b.N; i++ {
+			_, err = f.Write(data)
+			if err != nil {
+				panic(err)
+			}
+
+			runtime.Gosched()
+		}
+	})
+
+	b.Run("Buffered", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(size)
+
+		w := bufio.NewWriter(f)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err = w.Write(data)
+			if err != nil {
+				panic(err)
+			}
+
+			runtime.Gosched()
+		}
+	})
+
+	b.Run("Mercury-1us", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(size)
+
+		w := NewWriter(f, time.Microsecond)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err = w.Write(data)
+			if err != nil {
+				panic(err)
+			}
+
+			runtime.Gosched()
 		}
 
-		time.Sleep(1)
-	}
+		b.ReportMetric(float64(w.flushes)/float64(b.N), "flushes/op")
+	})
+
+	b.Run("Mercury-1ms", func(b *testing.B) {
+		b.ReportAllocs()
+		b.SetBytes(size)
+
+		w := NewWriter(f, time.Millisecond)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err = w.Write(data)
+			if err != nil {
+				panic(err)
+			}
+
+			runtime.Gosched()
+		}
+
+		b.ReportMetric(float64(w.flushes)/float64(b.N), "flushes/op")
+	})
 }
 
-func BenchmarkBufferedWriter64(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := bufio.NewWriter(f)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data64)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
+func Benchmark64(b *testing.B) {
+	benchWriters(b, 64)
 }
 
-func BenchmarkMercuryWriter64(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := NewWriter(f, time.Millisecond)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data64)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
+func Benchmark256(b *testing.B) {
+	benchWriters(b, 256)
 }
 
-var data8k = bytes.Repeat([]byte{1}, 8*1024)
-
-func BenchmarkStandardWriter8K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < b.N; i++ {
-		_, err = f.Write(data8k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
+func Benchmark2K(b *testing.B) {
+	benchWriters(b, 2048)
 }
 
-func BenchmarkBufferedWriter8K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := bufio.NewWriter(f)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data8k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
-}
-
-func BenchmarkMercuryWriter8K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := NewWriter(f, time.Millisecond)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data8k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
-}
-
-var data64k = bytes.Repeat([]byte{1}, 64*1024)
-
-func BenchmarkStandardWriter64K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < b.N; i++ {
-		_, err = f.Write(data64k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
-}
-
-func BenchmarkBufferedWriter64K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := bufio.NewWriter(f)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data64k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
-}
-
-func BenchmarkMercuryWriter64K(b *testing.B) {
-	f, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	w := NewWriter(f, time.Millisecond)
-
-	for i := 0; i < b.N; i++ {
-		_, err = w.Write(data64k)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(1)
-	}
+func Benchmark8K(b *testing.B) {
+	benchWriters(b, 8192)
 }
