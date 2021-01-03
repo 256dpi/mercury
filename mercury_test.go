@@ -214,8 +214,8 @@ func benchWriters(b *testing.B, size int64, wrap func(io.Writer) io.Writer) {
 
 	switch w.(type) {
 	case *Writer:
-		b.ReportMetric(float64(GetStats().Flushes-s.Flushes), "flushes")
-		b.ReportMetric(float64(GetStats().Drops-s.Drops), "drops")
+		b.ReportMetric(float64(GetStats().Executed-s.Executed), "executed")
+		b.ReportMetric(float64(GetStats().Skipped-s.Skipped), "skipped")
 	}
 }
 

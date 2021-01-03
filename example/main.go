@@ -38,20 +38,12 @@ func main() {
 		return strconv.Itoa(runtime.NumGoroutine())
 	})
 
-	var flushes uint64
-	god.Track("mercury-flushes", func() string {
-		f := mercury.GetStats().Flushes
-		n := f - flushes
-		flushes = f
-		return strconv.FormatUint(n, 10)
-	})
-
-	var drops uint64
-	god.Track("mercury-drops", func() string {
-		d := mercury.GetStats().Drops
-		n := d - drops
-		drops = d
-		return strconv.FormatUint(n, 10)
+	var stats mercury.Stats
+	god.Track("mercury-stats", func() string {
+		s := mercury.GetStats()
+		d := s.Sub(stats)
+		stats = s
+		return fmt.Sprintf("%d/%d", d.Executed, d.Skipped)
 	})
 
 	for i := 0; i < *writers/2; i++ {

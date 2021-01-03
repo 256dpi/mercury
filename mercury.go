@@ -8,27 +8,34 @@ import (
 	"time"
 )
 
-var flushes uint64
-var drops uint64
+var executed uint64
+var skipped uint64
 
 // Stats represents runtime statistics of all writers.
 type Stats struct {
 	// The number of executed async flushes.
-	Flushes uint64
+	Executed uint64
 
-	// The number of dropped async flushes.
-	Drops uint64
+	// The number of skipped async flushes.
+	Skipped uint64
+}
+
+func (s Stats) Sub(ss Stats) Stats {
+	return Stats{
+		Executed: s.Executed - ss.Executed,
+		Skipped:  s.Skipped - ss.Skipped,
+	}
 }
 
 // GetStats returns general statistics.
 func GetStats() Stats {
 	return Stats{
-		Flushes: atomic.LoadUint64(&flushes),
-		Drops:   atomic.LoadUint64(&drops),
+		Executed: atomic.LoadUint64(&executed),
+		Skipped:  atomic.LoadUint64(&skipped),
 	}
 }
 
-// Writer extends a buffered writer that flushes itself asynchronously. It uses
+// Writer extends a buffered writer that executed itself asynchronously. It uses
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
@@ -74,24 +81,24 @@ func newWriter(w *bufio.Writer, maxDelay time.Duration) *Writer {
 }
 
 // Write implements the io.Writer interface and writes data to the underlying
-// buffered writer and flushes it asynchronously.
+// buffered writer and executed it asynchronously.
 func (w *Writer) Write(p []byte) (int, error) {
 	return w.write(p, false)
 }
 
-// Flush flushes the buffered writer immediately.
+// Flush executed the buffered writer immediately.
 func (w *Writer) Flush() error {
 	_, err := w.write(nil, true)
 	return err
 }
 
-// WriteAndFlush writes data to the underlying buffered writer and flushes it
+// WriteAndFlush writes data to the underlying buffered writer and executed it
 // immediately after writing.
 func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 	return w.write(p, true)
 }
 
-// SetMaxDelay can be used to adjust the maximum delay of asynchronous flushes.
+// SetMaxDelay can be used to adjust the maximum delay of asynchronous executed.
 //
 // Note: The delay should not be below 1ms to prevent flushing every write
 // asynchronously.
@@ -143,7 +150,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	// get buffered
 	buffered := w.writer.Buffered()
 
-	// star timer if data is buffered but not armed
+	// arm timer if data is buffered
 	if buffered > 0 && !w.armed {
 		w.timer.Reset(delay)
 		w.armed = true
@@ -151,7 +158,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		return n, nil
 	}
 
-	// stop timer if no data is buffered anymore and armed
+	// clear timer if no data is buffered
 	if buffered == 0 && w.armed {
 		w.timer.Stop()
 		w.armed = false
@@ -159,7 +166,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		return n, nil
 	}
 
-	// otherwise reset already armed timer if some data has been flushed
+	// reset timer if some data has been flushed during write
 	if flushed && w.armed {
 		w.timer.Reset(delay)
 	}
@@ -168,22 +175,24 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 }
 
 func (w *Writer) flush() {
-	// return if more than one flush is queued
+	// return if a flush is already queued
 	n := atomic.LoadInt64(&w.queue)
-	if n > 1 {
-		// count drop
-		atomic.AddUint64(&drops, 1)
+	if n > 0 {
+		// count skip
+		atomic.AddUint64(&skipped, 1)
 
 		return
 	}
 
-	// add counter
+	// increment counter
 	atomic.AddInt64(&w.queue, 1)
-	defer atomic.AddInt64(&w.queue, -1)
 
 	// acquire mutex
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
+
+	// decrement counter
+	atomic.AddInt64(&w.queue, -1)
 
 	// set flag
 	w.armed = false
@@ -195,5 +204,5 @@ func (w *Writer) flush() {
 	}
 
 	// count flush
-	atomic.AddUint64(&flushes, 1)
+	atomic.AddUint64(&executed, 1)
 }
