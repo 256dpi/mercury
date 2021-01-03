@@ -168,6 +168,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 
 	// reset timer if some data has been flushed during write
 	if flushed && w.armed {
+		w.timer.Stop()
 		w.timer.Reset(delay)
 	}
 
