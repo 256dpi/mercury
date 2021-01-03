@@ -24,6 +24,9 @@ type Writer struct {
 
 // NewWriter wraps the provided writer and enables buffering and asynchronous
 // flushing using the specified maximum delay.
+//
+// Note: The delay should not be below 1ms to prevent flushing every write
+// asynchronously.
 func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 	return newWriter(bufio.NewWriter(w), maxDelay)
 }
@@ -31,6 +34,8 @@ func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 // NewWriterSize wraps the provided writer and enables buffering and asynchronous
 // flushing using the specified maximum delay. This method allows configuration
 // of the initial buffer size.
+// Note: The delay should not be below 1ms to prevent flushing every write
+// asynchronously.
 func NewWriterSize(w io.Writer, maxDelay time.Duration, size int) *Writer {
 	return newWriter(bufio.NewWriterSize(w, size), maxDelay)
 }
@@ -68,8 +73,16 @@ func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 }
 
 // SetMaxDelay can be used to adjust the maximum delay of asynchronous flushes.
+//
+// Note: The delay should not be below 1ms to prevent flushing every write
+// asynchronously.
 func (w *Writer) SetMaxDelay(delay time.Duration) {
 	atomic.StoreInt64(&w.delay, int64(delay))
+}
+
+// Flushes returns the number asynchronously performed flushes.
+func (w *Writer) Flushes() int64 {
+	return atomic.LoadInt64(&w.flushes)
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {

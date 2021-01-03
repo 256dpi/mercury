@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -12,33 +13,39 @@ import (
 	"github.com/256dpi/mercury"
 )
 
-const maxDelay = time.Millisecond
-const bufferSize = 32 * 1024
-
 var data = bytes.Repeat([]byte{0x0}, 256)
 
-var counter = god.NewCounter("data", func(total int) string {
+var bufferedBytes = god.NewCounter("buffered-bytes", func(total int) string {
 	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
 })
+
+var mercuryBytes = god.NewCounter("mercury-bytes", func(total int) string {
+	return fmt.Sprintf("%.2f GB/s", float64(total)/1000_000_000)
+})
+
+var mercuryFlushes = god.NewCounter("mercury-flushes", nil)
 
 func main() {
 	god.Init(god.Options{})
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < runtime.NumCPU()/2; i++ {
 		go writer()
+	}
+
+	for i := 0; i < runtime.NumCPU()/2; i++ {
+		go asyncWriter()
 	}
 
 	select {}
 }
 
 func writer() {
-	fd, err := os.OpenFile(os.DevNull, os.O_RDWR, 0666)
+	fd, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
 
-	w := mercury.NewWriterSize(fd, maxDelay, bufferSize)
-	// w := bufio.NewWriterSize(fd, bufferSize)
+	w := bufio.NewWriter(fd)
 
 	for {
 		n, err := w.Write(data)
@@ -46,6 +53,29 @@ func writer() {
 			panic(err)
 		}
 
-		counter.Add(n)
+		bufferedBytes.Add(n)
+	}
+}
+
+func asyncWriter() {
+	fd, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		panic(err)
+	}
+
+	w := mercury.NewWriter(fd, time.Millisecond)
+
+	var lf int64
+	for {
+		n, err := w.Write(data)
+		if err != nil {
+			panic(err)
+		}
+
+		mercuryBytes.Add(n)
+
+		f := w.Flushes()
+		mercuryFlushes.Add(int(f - lf))
+		lf = f
 	}
 }

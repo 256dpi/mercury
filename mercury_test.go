@@ -285,9 +285,9 @@ func BenchmarkBuffered_8K(b *testing.B) {
 	})
 }
 
-func BenchmarkMercury_64_1us(b *testing.B) {
+func BenchmarkMercury_64_10us(b *testing.B) {
 	benchWriters(b, 64, func(writer io.Writer) io.Writer {
-		return NewWriter(writer, time.Microsecond)
+		return NewWriter(writer, 10*time.Microsecond)
 	})
 }
 
@@ -297,9 +297,9 @@ func BenchmarkMercury_64_1ms(b *testing.B) {
 	})
 }
 
-func BenchmarkMercury_256_1us(b *testing.B) {
+func BenchmarkMercury_256_10us(b *testing.B) {
 	benchWriters(b, 256, func(writer io.Writer) io.Writer {
-		return NewWriter(writer, time.Microsecond)
+		return NewWriter(writer, 10*time.Microsecond)
 	})
 }
 
@@ -309,9 +309,9 @@ func BenchmarkMercury_256_1ms(b *testing.B) {
 	})
 }
 
-func BenchmarkMercury_2K_1us(b *testing.B) {
+func BenchmarkMercury_2K_10us(b *testing.B) {
 	benchWriters(b, 2048, func(writer io.Writer) io.Writer {
-		return NewWriter(writer, time.Microsecond)
+		return NewWriter(writer, 10*time.Microsecond)
 	})
 }
 
@@ -321,9 +321,9 @@ func BenchmarkMercury_2K_1ms(b *testing.B) {
 	})
 }
 
-func BenchmarkMercury_8K_1us(b *testing.B) {
+func BenchmarkMercury_8K_10us(b *testing.B) {
 	benchWriters(b, 8192, func(writer io.Writer) io.Writer {
-		return NewWriter(writer, time.Microsecond)
+		return NewWriter(writer, 10*time.Microsecond)
 	})
 }
 
