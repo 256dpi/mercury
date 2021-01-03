@@ -22,8 +22,7 @@ var counter = god.NewCounter("data", func(total int) string {
 })
 
 func main() {
-	god.Debug()
-	god.Metrics()
+	god.Init(god.Options{})
 
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go writer()
