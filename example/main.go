@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"runtime"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/256dpi/mercury"
 )
+
+var writers = flag.Int("writers", runtime.NumCPU(), "the number of writers")
 
 var data = bytes.Repeat([]byte{0x0}, 2048)
 
@@ -25,6 +28,10 @@ var mercuryBytes = god.NewCounter("mercury-bytes", func(total int) string {
 })
 
 func main() {
+	flag.Parse()
+
+	fmt.Printf("running with %d writers writers...\n", *writers)
+
 	god.Init(god.Options{})
 
 	god.Track("goroutines", func() string {
@@ -47,11 +54,11 @@ func main() {
 		return strconv.FormatUint(n, 10)
 	})
 
-	for i := 0; i < runtime.NumCPU()/2; i++ {
+	for i := 0; i < *writers/2; i++ {
 		go bufferedWriter()
 	}
 
-	for i := 0; i < runtime.NumCPU()/2; i++ {
+	for i := 0; i < *writers/2; i++ {
 		go mercuryWriter()
 	}
 
