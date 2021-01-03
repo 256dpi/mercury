@@ -32,14 +32,13 @@ func GetStats() Stats {
 // a timer to flush the buffered writer it it gets stale. Errors that occur
 // during the flush are returned on the next call to Write, Flush or WriteAndFlush.
 type Writer struct {
-	delay   int64
-	queue   int64
-	flushes uint64
-	writer  *bufio.Writer
-	timer   *time.Timer
-	armed   bool
-	err     error
-	mutex   sync.Mutex
+	delay  int64
+	queue  int64
+	writer *bufio.Writer
+	timer  *time.Timer
+	armed  bool
+	err    error
+	mutex  sync.Mutex
 }
 
 // NewWriter wraps the provided writer and enables buffering and asynchronous
@@ -98,11 +97,6 @@ func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 // asynchronously.
 func (w *Writer) SetMaxDelay(delay time.Duration) {
 	atomic.StoreInt64(&w.delay, int64(delay))
-}
-
-// Flushes returns the number asynchronously performed flushes.
-func (w *Writer) Flushes() uint64 {
-	return atomic.LoadUint64(&w.flushes)
 }
 
 func (w *Writer) write(p []byte, flush bool) (n int, err error) {
@@ -169,7 +163,9 @@ func (w *Writer) flush() {
 	// return if more than one flush is queued
 	n := atomic.LoadInt64(&w.queue)
 	if n > 1 {
+		// count drop
 		atomic.AddUint64(&drops, 1)
+
 		return
 	}
 
@@ -191,6 +187,5 @@ func (w *Writer) flush() {
 	}
 
 	// count flush
-	atomic.AddUint64(&w.flushes, 1)
 	atomic.AddUint64(&flushes, 1)
 }
