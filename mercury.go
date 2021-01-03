@@ -118,8 +118,11 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		flushed = true
 	}
 
+	// get buffered
+	buffered := w.writer.Buffered()
+
 	// star timer if data is buffered but not armed
-	if w.writer.Buffered() > 0 && !w.armed {
+	if buffered > 0 && !w.armed {
 		w.timer.Reset(delay)
 		w.armed = true
 
@@ -127,7 +130,7 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	}
 
 	// stop timer if no data is buffered and armed
-	if w.writer.Buffered() == 0 && w.armed {
+	if buffered == 0 && w.armed {
 		w.timer.Stop()
 		w.armed = false
 
