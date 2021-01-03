@@ -72,9 +72,12 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 		return 0, err
 	}
 
+	// prepare flag
+	var flushed bool
+
 	// write data if available
 	if len(p) > 0 {
-		n, err = w.writer.Write(p)
+		n, flushed, err = Write(w.writer, p)
 		if err != nil {
 			return n, err
 		}
@@ -94,6 +97,11 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 	// setup timer if data is buffered
 	if w.writer.Buffered() > 0 && w.timer == nil {
 		w.timer = time.AfterFunc(delay, w.flush)
+	}
+
+	// reset timer if data has been flushed
+	if flushed && w.timer != nil {
+		w.timer.Reset(delay)
 	}
 
 	// stop timer if no data is buffered
