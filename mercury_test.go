@@ -20,6 +20,7 @@ func TestGetStats(t *testing.T) {
 }
 
 func TestWriterWrite(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
@@ -32,14 +33,25 @@ func TestWriterWrite(t *testing.T) {
 	assert.True(t, w.armed)
 	assert.NoError(t, w.err)
 
-	time.Sleep(3 * time.Millisecond)
+	n, err = w.Write([]byte{2})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.True(t, w.armed)
+	assert.NoError(t, w.err)
 
-	assert.Equal(t, []byte{1}, b.Bytes())
+	time.Sleep(10 * time.Millisecond)
+
+	assert.Equal(t, []byte{1, 2}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{Initiated: 1, Executed: 1}, s)
 }
 
 func TestWriterWriteAndFlush(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
@@ -52,9 +64,14 @@ func TestWriterWriteAndFlush(t *testing.T) {
 	assert.Equal(t, []byte{1}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{}, s)
 }
 
 func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
@@ -73,9 +90,14 @@ func TestWriterWriteAndFlushAfterWrite(t *testing.T) {
 	assert.Equal(t, []byte{1, 2}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{Initiated: 1, Cancelled: 1}, s)
 }
 
 func TestWriterFlush(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Millisecond)
@@ -93,9 +115,14 @@ func TestWriterFlush(t *testing.T) {
 	assert.Equal(t, []byte{1}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{Initiated: 1, Cancelled: 1}, s)
 }
 
 func TestWriterWriteNoDelay(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, 0)
@@ -108,14 +135,19 @@ func TestWriterWriteNoDelay(t *testing.T) {
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
 
-	time.Sleep(3 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(t, []byte{1}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{}, s)
 }
 
 func TestWriterSetMaxDelay(t *testing.T) {
+	s := GetStats()
 	b := new(bytes.Buffer)
 
 	w := NewWriter(b, time.Minute)
@@ -136,11 +168,46 @@ func TestWriterSetMaxDelay(t *testing.T) {
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
 
-	time.Sleep(3 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(t, []byte{1, 2}, b.Bytes())
 	assert.False(t, w.armed)
 	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{Initiated: 1, Cancelled: 1}, s)
+}
+
+func TestWriterExtendedFlush(t *testing.T) {
+	s := GetStats()
+	b := new(bytes.Buffer)
+
+	w := NewWriterSize(b, time.Millisecond, 2)
+	assert.False(t, w.armed)
+	assert.NoError(t, w.err)
+
+	n, err := w.Write([]byte{1})
+	assert.Equal(t, 1, n)
+	assert.NoError(t, err)
+	assert.True(t, w.armed)
+	assert.NoError(t, w.err)
+
+	n, err = w.Write([]byte{2, 3})
+	assert.Equal(t, 2, n)
+	assert.NoError(t, err)
+	assert.True(t, w.armed)
+	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+
+	assert.Equal(t, []byte{1, 2, 3}, b.Bytes())
+	assert.False(t, w.armed)
+	assert.NoError(t, w.err)
+
+	time.Sleep(10 * time.Millisecond)
+	s = GetStats().Sub(s)
+	assert.Equal(t, Stats{Initiated: 1, Extended: 1, Executed: 1}, s)
 }
 
 func TestWriterWriteError(t *testing.T) {
@@ -181,7 +248,7 @@ func TestWriterWriteAsyncError(t *testing.T) {
 	assert.Equal(t, 1, n)
 	assert.NoError(t, err)
 
-	time.Sleep(3 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	n, err = w.Write([]byte{1})
 	assert.Equal(t, 0, n)
