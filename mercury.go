@@ -8,30 +8,36 @@ import (
 	"time"
 )
 
+var initiated uint64
 var executed uint64
-var skipped uint64
+var extended uint64
+var cancelled uint64
 
 // Stats represents runtime statistics of all writers.
 type Stats struct {
-	// The number of executed async flushes.
-	Executed uint64
-
-	// The number of skipped async flushes.
-	Skipped uint64
+	Initiated uint64
+	Executed  uint64
+	Extended  uint64
+	Cancelled uint64
 }
 
+// Sub will return the difference of the two stats objects.
 func (s Stats) Sub(ss Stats) Stats {
 	return Stats{
-		Executed: s.Executed - ss.Executed,
-		Skipped:  s.Skipped - ss.Skipped,
+		Initiated: s.Initiated - ss.Initiated,
+		Executed:  s.Executed - ss.Executed,
+		Extended:  s.Extended - ss.Extended,
+		Cancelled: s.Cancelled - ss.Cancelled,
 	}
 }
 
 // GetStats returns general statistics.
 func GetStats() Stats {
 	return Stats{
-		Executed: atomic.LoadUint64(&executed),
-		Skipped:  atomic.LoadUint64(&skipped),
+		Initiated: atomic.LoadUint64(&initiated),
+		Executed:  atomic.LoadUint64(&executed),
+		Extended:  atomic.LoadUint64(&extended),
+		Cancelled: atomic.LoadUint64(&cancelled),
 	}
 }
 
@@ -152,48 +158,41 @@ func (w *Writer) write(p []byte, flush bool) (n int, err error) {
 
 	// arm timer if data is buffered
 	if buffered > 0 && !w.armed {
+		atomic.AddUint64(&initiated, 1)
 		w.timer.Reset(delay)
 		w.armed = true
 
 		return n, nil
 	}
 
-	// clear timer if no data is buffered
+	// clear timer if no data is buffered and the timer has not yet fired
 	if buffered == 0 && w.armed {
-		w.timer.Stop()
-		w.armed = false
+		if w.timer.Stop() {
+			atomic.AddUint64(&cancelled, 1)
+			w.armed = false
+		}
 
 		return n, nil
 	}
 
-	// reset timer if some data has been flushed during write
+	// reset timer if data has been flushed and the timer has not yet fired
 	if flushed && w.armed {
-		w.timer.Stop()
-		w.timer.Reset(delay)
+		if w.timer.Stop() {
+			atomic.AddUint64(&extended, 1)
+			w.timer.Reset(delay)
+		}
 	}
 
 	return n, nil
 }
 
 func (w *Writer) flush() {
-	// return if a flush is already queued
-	n := atomic.LoadInt64(&w.queue)
-	if n > 0 {
-		// count skip
-		atomic.AddUint64(&skipped, 1)
-
-		return
-	}
-
-	// increment counter
-	atomic.AddInt64(&w.queue, 1)
+	// count flush
+	atomic.AddUint64(&executed, 1)
 
 	// acquire mutex
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-
-	// decrement counter
-	atomic.AddInt64(&w.queue, -1)
 
 	// set flag
 	w.armed = false
@@ -203,7 +202,4 @@ func (w *Writer) flush() {
 	if err != nil && w.err == nil {
 		w.err = err
 	}
-
-	// count flush
-	atomic.AddUint64(&executed, 1)
 }

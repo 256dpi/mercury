@@ -212,11 +212,8 @@ func benchWriters(b *testing.B, size int64, wrap func(io.Writer) io.Writer) {
 		}
 	}
 
-	switch w.(type) {
-	case *Writer:
-		b.ReportMetric(float64(GetStats().Executed-s.Executed), "executed")
-		b.ReportMetric(float64(GetStats().Skipped-s.Skipped), "skipped")
-	}
+	s = GetStats().Sub(s)
+	b.ReportMetric(float64(s.Executed), "flushes")
 }
 
 func BenchmarkStandard_32(b *testing.B) {
