@@ -13,7 +13,7 @@ var executed uint64
 var extended uint64
 var cancelled uint64
 
-// Stats represents runtime statistics of all writers.
+// Stats holds runtime statistics.
 type Stats struct {
 	Initiated uint64
 	Executed  uint64
@@ -31,7 +31,7 @@ func (s Stats) Sub(ss Stats) Stats {
 	}
 }
 
-// GetStats returns general statistics.
+// GetStats returns runtime statistics.
 func GetStats() Stats {
 	return Stats{
 		Initiated: atomic.LoadUint64(&initiated),
@@ -41,9 +41,10 @@ func GetStats() Stats {
 	}
 }
 
-// Writer extends a buffered writer that executed itself asynchronously. It uses
-// a timer to flush the buffered writer it it gets stale. Errors that occur
-// during the flush are returned on the next call to Write, Flush or WriteAndFlush.
+// Writer extends a buffered writer that flushes itself asynchronously. It uses
+// a timer to flush the buffered writer if it gets stale. Errors that occur
+// during and asynchronous flush are returned on the next call to Write, Flush
+// or WriteAndFlush.
 type Writer struct {
 	delay  int64
 	queue  int64
@@ -66,6 +67,7 @@ func NewWriter(w io.Writer, maxDelay time.Duration) *Writer {
 // NewWriterSize wraps the provided writer and enables buffering and asynchronous
 // flushing using the specified maximum delay. This method allows configuration
 // of the initial buffer size.
+//
 // Note: The delay should not be below 1ms to prevent flushing every write
 // asynchronously.
 func NewWriterSize(w io.Writer, maxDelay time.Duration, size int) *Writer {
@@ -87,24 +89,24 @@ func newWriter(w *bufio.Writer, maxDelay time.Duration) *Writer {
 }
 
 // Write implements the io.Writer interface and writes data to the underlying
-// buffered writer and executed it asynchronously.
+// buffered writer and flushes it asynchronously.
 func (w *Writer) Write(p []byte) (int, error) {
 	return w.write(p, false)
 }
 
-// Flush executed the buffered writer immediately.
+// Flush flushes the buffered writer immediately.
 func (w *Writer) Flush() error {
 	_, err := w.write(nil, true)
 	return err
 }
 
-// WriteAndFlush writes data to the underlying buffered writer and executed it
+// WriteAndFlush writes data to the underlying buffered writer and flushes it
 // immediately after writing.
 func (w *Writer) WriteAndFlush(p []byte) (int, error) {
 	return w.write(p, true)
 }
 
-// SetMaxDelay can be used to adjust the maximum delay of asynchronous executed.
+// SetMaxDelay can be used to adjust the maximum delay of asynchronous flushes.
 //
 // Note: The delay should not be below 1ms to prevent flushing every write
 // asynchronously.
